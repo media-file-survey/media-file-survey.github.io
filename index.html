@@ -88,11 +88,6 @@ input[type=text], textarea {
 }
 textarea { min-height: 120px; resize: vertical; display: block; }
 .other-text { margin: 0 0 8px; }
-input[aria-invalid="true"] { border-color: var(--error); }
-.details { margin-top: 12px; padding: 18px; background: var(--soft); border-radius: 9px; }
-.details-note { margin: 0 0 16px; font-size: .9rem; }
-.details-field { margin-top: 14px; }
-.details-label { display: block; font-weight: 600; margin-bottom: 6px; }
 .grid-row { padding: 14px 0; border-top: 1px solid var(--line); }
 .grid-row:first-of-type { border-top: 0; padding-top: 2px; }
 .grid-row:last-of-type { padding-bottom: 0; }
@@ -226,18 +221,7 @@ const SECTIONS = [
       rows: ["It would free up time for more skilled or creative work", "It would reduce paid work for people in my field", "It would make it harder for newcomers to learn the craft", "I would still want to check the results myself"] }
   ]},
   { title: "Closing", questions: [
-    { id: "Q28", text: "Is there anything else about managing media files that I should know?", type: "text", hint: "Optional" },
-    { id: "Q29", text: "Would you be open to a 20-minute interview about how you work?", type: "one", hint: "Optional",
-      options: ["Yes", "No, thanks"],
-      details: {
-        showOn: "Yes",
-        note: "Your details will be stored with your survey answers, so I'll know which answers are yours. I'll only use them to arrange the interview and for this research.",
-        fields: [
-          { name: "Q29a", label: "Your name", required: true, autocomplete: "name", error: "Please enter your name." },
-          { name: "Q29b", label: "Best email or phone number", required: true, error: "Please enter an email or phone number." },
-          { name: "Q29c", label: "What is your main role?", autocomplete: "organization-title" }
-        ]
-      } }
+    { id: "Q28", text: "Is there anything else about managing media files that I should know?", type: "text", hint: "Optional" }
   ]}
 ];
 
@@ -271,7 +255,7 @@ function introBlock() {
     el("p", {}, "Thanks for taking part. This survey takes about 10 minutes and asks how you organise video, audio and other media files after a shoot."),
     el("p", {}, "The answers will help me research whether software could make this work easier, and where it should not interfere."),
     el("ul", {},
-      el("li", {}, "This survey only asks for your name and contact details if you offer to do an interview."),
+      el("li", {}, "This survey doesn't ask for your name or contact details."),
       el("li", {}, "The survey runs on GitHub and your answers are stored with Formspree. You can read their privacy policies here: ",
         el("a", { href: "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement", target: "_blank", rel: "noopener" }, "GitHub"),
         " and ",
@@ -293,29 +277,6 @@ function optionRow(q, value, type) {
   return row;
 }
 
-function buildDetails(q) {
-  const box = el("div", { class: "details", hidden: true });
-  box.append(el("p", { class: "details-note" }, q.details.note));
-  q.details.fields.forEach(f => {
-    const id = "detail-" + f.name;
-    const label = el("label", { class: "details-label", htmlFor: id }, f.label);
-    if (f.required) label.append(el("span", { class: "req" }, "Required"));
-    const input = el("input", { type: "text", id, name: f.name, maxLength: 200, autocomplete: f.autocomplete || "off", "aria-describedby": id + "-error" });
-    box.append(el("div", { class: "details-field" }, label, input, el("p", { class: "error", id: id + "-error", hidden: true })));
-  });
-  return box;
-}
-
-function updateDetails(q, fs) {
-  const box = fs.querySelector(".details");
-  const on = selected(q)[0] === q.details.showOn;
-  box.hidden = !on;
-  if (!on) {
-    box.querySelectorAll("input").forEach(i => { i.value = ""; i.removeAttribute("aria-invalid"); });
-    box.querySelectorAll(".error").forEach(e => { e.hidden = true; e.textContent = ""; });
-  }
-}
-
 function buildQuestion(q) {
   const fs = el("fieldset", { id: "fs-" + q.id });
   const legend = el("legend", {}, el("span", { class: "qnum" }, q.id.slice(1) + "."), q.text);
@@ -324,9 +285,7 @@ function buildQuestion(q) {
   if (q.hint) fs.append(el("p", { class: "hint" }, q.hint));
   if (q.type === "one" || q.type === "many") {
     q.options.forEach(o => fs.append(...optionRow(q, o, q.type)));
-    if (q.details) fs.append(buildDetails(q));
     fs.addEventListener("change", () => {
-      if (q.details) updateDetails(q, fs);
       const other = fs.querySelector(".other-text");
       if (other) {
         const box = fs.querySelector(`input[value="${OTHER}"]`);
@@ -394,29 +353,15 @@ function selected(q) {
 
 function validate(sec) {
   let firstBad = null;
-  let firstBadInput = null;
   sec.questions.forEach(q => {
     const fs = document.getElementById("fs-" + q.id);
-    const err = fs.querySelector(":scope > .error");
+    const err = fs.querySelector(".error");
     const bad = q.required && selected(q).length === 0;
     err.hidden = !bad;
     err.textContent = bad ? "Please answer this question to continue." : "";
     if (bad && !firstBad) firstBad = fs;
-    if (q.details) {
-      const box = fs.querySelector(".details");
-      q.details.fields.forEach(f => {
-        const input = box.querySelector(`[name="${f.name}"]`);
-        const fieldErr = document.getElementById(input.id + "-error");
-        const missing = !box.hidden && f.required && input.value.trim() === "";
-        input.setAttribute("aria-invalid", missing ? "true" : "false");
-        fieldErr.hidden = !missing;
-        fieldErr.textContent = missing ? f.error : "";
-        if (missing && !firstBad) { firstBad = input; firstBadInput = input; }
-      });
-    }
   });
   if (firstBad) firstBad.scrollIntoView({ behavior: "smooth", block: "center" });
-  if (firstBadInput) firstBadInput.focus({ preventScroll: true });
   return !firstBad;
 }
 
@@ -437,12 +382,6 @@ function collect() {
         return t ? `Other: ${t}` : OTHER;
       });
       out[`${q.id} ${q.text}`] = vals.join("; ");
-      if (q.details) {
-        q.details.fields.forEach(f => {
-          const input = form.querySelector(`[name="${f.name}"]`);
-          out[`${f.name} ${f.label}`] = input.closest(".details").hidden ? "" : input.value.trim();
-        });
-      }
     }
   }));
   const trap = form.querySelector('[name="_gotcha"]').value;
@@ -450,13 +389,12 @@ function collect() {
   return out;
 }
 
-function finish(title, message, withContact) {
+function finish(title, message) {
   form.hidden = true;
   progress.hidden = true;
   endBox.hidden = false;
   endBox.innerHTML = "";
   endBox.append(el("h2", {}, title), el("p", {}, message));
-  if (withContact) endBox.append(contactLine());
   endBox.focus();
   window.scrollTo(0, 0);
 }
@@ -479,10 +417,7 @@ async function submit() {
       body: JSON.stringify(collect())
     });
     if (!res.ok) throw new Error("HTTP " + res.status);
-    const wantsInterview = selected({ id: "Q29" })[0] === "Yes";
-    finish("Thank you", wantsInterview
-      ? "Your answers and details have been sent. I'll be in touch to arrange the interview."
-      : "Your answers have been sent. They are a real help to this research.", wantsInterview);
+    finish("Thank you", "Your answers have been sent. They are a real help to this research.");
   } catch (e) {
     err.textContent = "Your answers couldn't be sent. Please check your connection and try again.";
     err.hidden = false;
@@ -494,7 +429,6 @@ async function submit() {
 form.addEventListener("submit", e => {
   e.preventDefault();
   const sec = SECTIONS[page];
-  if (!validate(sec)) return;
   const ended = sec.questions.find(q => q.endOn && selected(q)[0] === q.endOn);
   if (ended) {
     finish("Thank you", ended.id === "Q1"
@@ -502,6 +436,7 @@ form.addEventListener("submit", e => {
       : "This survey is for people who handle media files, so there's nothing more to answer. No answers were saved. You can close this page.");
     return;
   }
+  if (!validate(sec)) return;
   if (page === SECTIONS.length - 1) submit();
   else show(page + 1);
 });
