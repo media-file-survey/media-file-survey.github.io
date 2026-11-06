@@ -12,7 +12,7 @@ const CONFIG = {
   researcherName: "Emmy",   // Your name
   researcherEmail: "emyliu7@gmail.com",  // Email for respondents' questions
   formEndpoint: "https://formspree.io/f/mzeeqbey",     // Where answers are sent
-  interviewFormUrl: "https://docs.google.com/forms/d/e/1FAIpQLScuJwCbXrgiX5MDx4vj-S0yZ0Ea6R1-Lmuf_kpqZdu31mXtqQ/viewform", // Separate sign-up form for interview volunteers
+  interviewFormUrl: "interview.html", // Separate sign-up page for interview volunteers
   currency: "$"         // Currency symbol used in Q21
 };
 </script>
@@ -395,7 +395,7 @@ function finish(title, message, withLink) {
   endBox.append(el("h2", {}, title), el("p", {}, message));
   if (withLink) {
     if (CONFIG.interviewFormUrl) {
-      endBox.append(el("p", {}, el("a", { href: CONFIG.interviewFormUrl, target: "_blank", rel: "noopener" }, "Sign up for an interview")));
+      endBox.append(el("p", {}, el("a", { href: CONFIG.interviewFormUrl }, "Sign up for an interview")));
     } else {
       endBox.append(contactLine());
     }
