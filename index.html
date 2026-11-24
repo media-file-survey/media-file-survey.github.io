@@ -12,7 +12,7 @@ const CONFIG = {
   researcherName: "Emmy",   // Your name
   researcherEmail: "emyliu7@gmail.com",  // Email for respondents' questions
   formEndpoint: "https://formspree.io/f/mzeeqbey",     // Where answers are sent
-  currency: "$"         // Currency symbol used in Q21
+  currency: "$"         // Replaces {currency} in question text
 };
 </script>
 <style>
@@ -150,80 +150,473 @@ button:disabled { opacity: .6; cursor: default; }
 <script>
 const C = CONFIG.currency;
 const OTHER = "Other";
-const FREQ = ["Not important", "Slightly important", "Moderately important", "Very important", "Essential"];
+
+const TEXT = {
+  "otherLabel": "Other (please say)",
+  "required": "Please answer this question to continue.",
+  "back": "Back",
+  "next": "Next",
+  "submit": "Submit",
+  "sending": "Sending…",
+  "thanksTitle": "Thank you",
+  "thanksMessage": "Your answers have been sent. They are a real help to this research.",
+  "endTitle": "Thank you",
+  "sendFailed": "Your answers couldn't be sent. Please check your connection and try again.",
+  "notAccepting": "This survey isn't accepting responses yet. Your answers have not been sent."
+};
+
+const INTRO = {
+  "paragraphs": [
+    "Thanks for taking part. This survey takes about 10 minutes and asks how you organise video, audio and other media files after a shoot.",
+    "The answers will help me research whether software could make this work easier, and where it should not interfere."
+  ],
+  "bullets": [
+    "This survey doesn't ask for your name or contact details.",
+    "The survey runs on GitHub and your answers are stored with Formspree. You can read their privacy policies here: [GitHub](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement) and [Formspree](https://formspree.io/legal/privacy-policy/).",
+    "Taking part is voluntary. You can skip any question that isn't marked required, or stop at any time.",
+    "Please don't include client names, project titles or other confidential details.",
+    "Your answers will only be used for this research project."
+  ]
+};
 
 const SECTIONS = [
-  { title: "Introduction and consent", intro: true, questions: [
-    { id: "Q1", text: "Do you agree to take part?", type: "one", required: true, endOn: "No",
-      options: ["Yes, I am 18 or older and I agree to take part", "No"] }
-  ]},
-  { title: "Section A: About you", questions: [
-    { id: "Q2", text: "Do you personally copy, name, sort or look after media files as part of your work or projects?", type: "one", required: true, endOn: "No",
-      options: ["Yes, regularly", "Yes, occasionally", "No"] },
-    { id: "Q3", text: "Which best describes your main role?", type: "one", required: true,
-      options: ["Assistant editor", "Editor", "DIT or data wrangler", "Post-production coordinator or supervisor", "Independent filmmaker or documentary maker", "Freelance videographer", "Online content creator", "Student", OTHER] },
-    { id: "Q4", text: "How many years have you worked with media files?", type: "one",
-      options: ["Less than 1", "1 to 3", "4 to 9", "10 or more"] },
-    { id: "Q5", text: "What kind of projects do you mostly work on?", type: "many", max: 2, hint: "Choose up to two",
-      options: ["Feature films or scripted drama", "Television or streaming series", "Documentary", "Commercials or corporate video", "Weddings or events", "YouTube, TikTok or other online content", OTHER] },
-    { id: "Q6", text: "How many people usually share responsibility for the files on your projects?", type: "one",
-      options: ["Just me", "2 to 5", "6 to 20", "More than 20"] }
-  ]},
-  { title: "Section B: How you work now", note: "Think about a typical recent project when answering.", questions: [
-    { id: "Q7", text: "Roughly how many media files does a typical project produce?", type: "one",
-      options: ["Fewer than 100", "100 to 499", "500 to 1,999", "2,000 or more", "Not sure"] },
-    { id: "Q8", text: "How many cameras or recorders usually feed into one project?", type: "one",
-      options: ["1", "2 to 3", "4 or more"] },
-    { id: "Q9", text: "Where do you keep files while working on them?", type: "many", hint: "Choose all that apply",
-      options: ["Computer's internal drive", "External drives", "Shared network storage (NAS or SAN)", "Cloud storage", OTHER] },
-    { id: "Q10", text: "Which tools do you use to copy, name or organise files?", type: "many", hint: "Choose all that apply",
-      options: ["Windows Explorer or macOS Finder, by hand", "Editing software (Premiere Pro, DaVinci Resolve, Final Cut Pro, Avid)", "Offload or backup software (ShotPut Pro, Silverstack, OffShoot)", "Batch renaming software", "Spreadsheets or written logs", "Custom scripts", OTHER] },
-    { id: "Q11", text: "What usually happens to the original camera filenames?", type: "one",
-      options: ["I keep them, and add any labels only inside my editing software", "I keep the originals and rename copies", "I rename the original files", "It depends on the project", "Someone else decides", "Not sure"] },
-    { id: "Q12", text: "Where do your naming and folder rules usually come from?", type: "one",
-      options: ["My own system", "My company or production", "Each client or project sets its own", "There are no consistent rules", OTHER] }
-  ]},
-  { title: "Section C: What causes problems", questions: [
-    { id: "Q13", text: "On a typical project, how long do you personally spend copying, naming and organising files?", type: "one",
-      options: ["Less than 30 minutes", "30 minutes to 2 hours", "2 to 5 hours", "5 to 10 hours", "More than 10 hours", "Not sure"] },
-    { id: "Q14", text: "How much of a burden is each task for you?", type: "grid",
-      columns: ["Not a burden", "Minor", "Moderate", "Major", "Don't do this"],
-      rows: ["Copying files and checking they copied correctly", "Renaming files", "Creating and keeping folder structures", "Matching audio to video", "Identifying the scene and take in each clip", "Finding a specific clip later", "Finding duplicate files", "Handing files to another person or team", "Archiving finished projects"] },
-    { id: "Q15", text: "If one of those tasks could disappear tomorrow, which would you choose?", type: "one",
-      options: ["Copying and checking files", "Renaming files", "Creating and keeping folder structures", "Matching audio to video", "Identifying scenes and takes", "Finding specific clips", "Finding duplicates", "Handing files over", "Archiving", "None of these"] },
-    { id: "Q16", text: "In the past 12 months, how often has each of these happened to you?", type: "grid",
-      columns: ["Never", "Once or twice", "Several times", "Monthly or more"],
-      rows: ["Couldn't find a file I needed", "Files had wrong or inconsistent names", "Links broke in an editing project after files moved or were renamed", "Wasted storage or confusion from duplicate files", "Received badly organised files from someone else", "A file was lost or corrupted"] },
-    { id: "Q17", text: "Describe the last time a file problem cost you time. What happened, and how did you fix it?", type: "text", hint: "Optional. No confidential details, please." }
-  ]},
-  { title: "Section D: Existing tools and cost", questions: [
-    { id: "Q18", text: "In the past two years, has anyone paid for software mainly to copy, name or organise your media files?", type: "one",
-      options: ["Yes, I paid", "Yes, my employer or client paid", "No, I only use free or included tools", "No, I don't use any such tool", "Not sure"] },
-    { id: "Q19", text: "How well do your current tools handle file organisation?", type: "one",
-      options: ["Very poorly", "Poorly", "Acceptably", "Well", "Very well"] },
-    { id: "Q20", text: "What is the biggest thing your current tools don't do well?", type: "text", hint: "Optional" },
-    { id: "Q21", text: "Suppose a tool saved you several hours on a typical project. What is the most you would realistically pay per month?", type: "one",
-      options: ["Nothing", `Up to ${C}5`, `${C}6 to ${C}10`, `${C}11 to ${C}20`, `${C}21 to ${C}50`, `More than ${C}50`, "My employer would decide"] },
-    { id: "Q22", text: "How would you prefer to pay for a tool like this?", type: "one",
-      options: ["One-time purchase", "Monthly or yearly subscription", "Per project", "I would only use a free tool", "No preference"] }
-  ]},
-  { title: "Section E: Automation, AI and trust", questions: [
-    { id: "Q23", text: "How much would you let software do each of these?", type: "grid",
-      columns: ["Do it automatically", "Suggest, and I approve", "I wouldn't use this"],
-      rows: ["Read the date, camera and other details stored in files", "Suggest file names", "Rename copies of files", "Rename original camera files", "Sort files into folders", "Read slates in footage to identify scene and take", "Use AI on my own computer to describe footage", "Use AI in the cloud to describe footage"] },
-    { id: "Q24", text: "Are you allowed to upload footage to outside online services for processing?", type: "one",
-      options: ["Yes, usually", "It depends on the project or client", "No, usually not", "Not sure"] },
-    { id: "Q25", text: "How important is it that a tool like this works without an internet connection?", type: "one", options: FREQ },
-    { id: "Q26", text: "Would a feature's energy use or environmental impact affect whether you use it?", type: "one",
-      options: ["Not at all", "A little", "Moderately", "A lot", "Not sure"] },
-    { id: "Q27", text: "How much do you agree with each statement about automating file organisation?", type: "grid",
-      columns: ["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"],
-      rows: ["It would free up time for more skilled or creative work", "It would reduce paid work for people in my field", "It would make it harder for newcomers to learn the craft", "I would still want to check the results myself"] }
-  ]},
-  { title: "Closing", questions: [
-    { id: "Q28", text: "Is there anything else about managing media files that I should know?", type: "text", hint: "Optional" }
-  ]}
+  {
+    "title": "Introduction and consent",
+    "intro": true,
+    "questions": [
+      {
+        "id": "Q1",
+        "text": "Do you agree to take part?",
+        "type": "one",
+        "required": true,
+        "options": [
+          "Yes, I am 18 or older and I agree to take part",
+          "No"
+        ],
+        "endOn": "No",
+        "endMessage": "No problem. You haven't taken part and no answers were saved. You can close this page."
+      }
+    ]
+  },
+  {
+    "title": "Section A: About you",
+    "questions": [
+      {
+        "id": "Q2",
+        "text": "Do you personally copy, name, sort or look after media files as part of your work or projects?",
+        "type": "one",
+        "required": true,
+        "options": [
+          "Yes, regularly",
+          "Yes, occasionally",
+          "No"
+        ],
+        "endOn": "No",
+        "endMessage": "This survey is for people who handle media files, so there's nothing more to answer. No answers were saved. You can close this page."
+      },
+      {
+        "id": "Q3",
+        "text": "Which best describes your main role?",
+        "type": "one",
+        "required": true,
+        "options": [
+          "Assistant editor",
+          "Editor",
+          "DIT or data wrangler",
+          "Post-production coordinator or supervisor",
+          "Independent filmmaker or documentary maker",
+          "Freelance videographer",
+          "Festival coordinator",
+          "Online content creator",
+          "Student",
+          "Other"
+        ]
+      },
+      {
+        "id": "Q4",
+        "text": "How many years have you worked with media files?",
+        "type": "one",
+        "options": [
+          "Less than 1",
+          "1 to 3",
+          "4 to 9",
+          "10 or more"
+        ]
+      },
+      {
+        "id": "Q5",
+        "text": "What kind of projects do you mostly work on?",
+        "type": "many",
+        "hint": "Choose up to two",
+        "options": [
+          "Feature films or scripted drama",
+          "Television or streaming series",
+          "Documentary",
+          "Commercials or corporate video",
+          "Weddings or events",
+          "YouTube, TikTok or other online content",
+          "Short Films",
+          "Other"
+        ],
+        "max": 2
+      },
+      {
+        "id": "Q6",
+        "text": "How many people usually share responsibility for the files on your projects?",
+        "type": "one",
+        "options": [
+          "Just me",
+          "2 to 5",
+          "6 to 20",
+          "More than 20"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Section B: How you work now",
+    "note": "Think about a typical recent project when answering.",
+    "questions": [
+      {
+        "id": "Q7",
+        "text": "Roughly how many media files does a typical project produce?",
+        "type": "one",
+        "options": [
+          "Fewer than 100",
+          "100 to 499",
+          "500 to 1,999",
+          "2,000 or more",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "Q8",
+        "text": "How many cameras or recorders usually feed into one project?",
+        "type": "one",
+        "options": [
+          "1",
+          "2 to 3",
+          "4 or more"
+        ]
+      },
+      {
+        "id": "Q9",
+        "text": "Where do you keep files while working on them?",
+        "type": "many",
+        "hint": "Choose all that apply",
+        "options": [
+          "Computer's internal drive",
+          "External drives",
+          "Shared network storage (NAS or SAN)",
+          "Cloud storage",
+          "Other"
+        ]
+      },
+      {
+        "id": "Q10",
+        "text": "Which tools do you use to copy, name or organise files?",
+        "type": "many",
+        "hint": "Choose all that apply",
+        "options": [
+          "Windows Explorer or macOS Finder, by hand",
+          "Editing software (Premiere Pro, DaVinci Resolve, Final Cut Pro, Avid)",
+          "Offload or backup software (ShotPut Pro, Silverstack, OffShoot)",
+          "Batch renaming software",
+          "Spreadsheets or written logs",
+          "Custom scripts",
+          "Other"
+        ]
+      },
+      {
+        "id": "Q11",
+        "text": "What usually happens to the original camera filenames?",
+        "type": "one",
+        "options": [
+          "I keep them, and add any labels only inside my editing software",
+          "I keep the originals and rename copies",
+          "I rename the original files",
+          "It depends on the project",
+          "Someone else decides",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "Q12",
+        "text": "Where do your naming and folder rules usually come from?",
+        "type": "one",
+        "options": [
+          "My own system",
+          "My company or production",
+          "Each client or project sets its own",
+          "There are no consistent rules",
+          "Other"
+        ]
+      },
+      {
+        "id": "Q13",
+        "text": "Which aspect of file management is more relevant to your work?",
+        "type": "one",
+        "options": [
+          "Organising files into folders and subfolders",
+          "Renaming files and maintaining consistent naming conventions",
+          "Both are equally important",
+          "Neither is particularly relevant to my workflow",
+          "Other"
+        ]
+      },
+      {
+        "id": "Q14",
+        "text": "What would save you more time in your daily workflow?",
+        "type": "one",
+        "options": [
+          "Automatically sorting files into predefined folders",
+          "Automatically renaming files according to a consistent naming convention",
+          "Both would be equally helpful",
+          "Neither would make a significant difference"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Section C: What causes problems",
+    "questions": [
+      {
+        "id": "Q15",
+        "text": "On a typical project, how long do you personally spend copying, naming and organising files?",
+        "type": "one",
+        "options": [
+          "Less than 30 minutes",
+          "30 minutes to 2 hours",
+          "2 to 5 hours",
+          "5 to 10 hours",
+          "More than 10 hours",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "Q16",
+        "text": "How much of a burden is each task for you?",
+        "type": "grid",
+        "columns": [
+          "Not a burden",
+          "Minor",
+          "Moderate",
+          "Major",
+          "Don't do this"
+        ],
+        "rows": [
+          "Copying files and checking they copied correctly",
+          "Renaming files",
+          "Creating and keeping folder structures",
+          "Matching audio to video",
+          "Identifying the scene and take in each clip",
+          "Finding a specific clip later",
+          "Finding duplicate files",
+          "Handing files to another person or team",
+          "Archiving finished projects"
+        ]
+      },
+      {
+        "id": "Q17",
+        "text": "If one of those tasks could disappear tomorrow, which would you choose?",
+        "type": "one",
+        "options": [
+          "Copying and checking files",
+          "Renaming files",
+          "Creating and keeping folder structures",
+          "Matching audio to video",
+          "Identifying scenes and takes",
+          "Finding specific clips",
+          "Finding duplicates",
+          "Handing files over",
+          "Archiving",
+          "None of these"
+        ]
+      },
+      {
+        "id": "Q18",
+        "text": "In the past 12 months, how often has each of these happened to you?",
+        "type": "grid",
+        "columns": [
+          "Never",
+          "Once or twice",
+          "Several times",
+          "Monthly or more"
+        ],
+        "rows": [
+          "Couldn't find a file I needed",
+          "Files had wrong or inconsistent names",
+          "Links broke in an editing project after files moved or were renamed",
+          "Wasted storage or confusion from duplicate files",
+          "Received badly organised files from someone else",
+          "A file was lost or corrupted"
+        ]
+      },
+      {
+        "id": "Q19",
+        "text": "Describe the last time a file problem cost you time. What happened, and how did you fix it?",
+        "type": "text",
+        "hint": "Optional. No confidential details, please."
+      }
+    ]
+  },
+  {
+    "title": "Section D: Existing tools and cost",
+    "questions": [
+      {
+        "id": "Q20",
+        "text": "In the past two years, has anyone paid for software mainly to copy, name or organise your media files?",
+        "type": "one",
+        "options": [
+          "Yes, I paid",
+          "Yes, my employer or client paid",
+          "No, I only use free or included tools",
+          "No, I don't use any such tool",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "Q21",
+        "text": "How well do your current tools handle file organisation?",
+        "type": "one",
+        "options": [
+          "Very poorly",
+          "Poorly",
+          "Acceptably",
+          "Well",
+          "Very well"
+        ]
+      },
+      {
+        "id": "Q22",
+        "text": "What is the biggest thing your current tools don't do well?",
+        "type": "text",
+        "hint": "Optional"
+      },
+      {
+        "id": "Q23",
+        "text": "Suppose a tool saved you several hours on a typical project. What is the most you would realistically pay per month?",
+        "type": "one",
+        "options": [
+          "Nothing",
+          "Up to {currency}5",
+          "{currency}6 to {currency}10",
+          "{currency}11 to {currency}20",
+          "{currency}21 to {currency}50",
+          "More than {currency}50",
+          "My employer would decide"
+        ]
+      },
+      {
+        "id": "Q24",
+        "text": "How would you prefer to pay for a tool like this?",
+        "type": "one",
+        "options": [
+          "One-time purchase",
+          "Monthly or yearly subscription",
+          "Per project",
+          "I would only use a free tool",
+          "No preference"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Section E: Automation, AI and trust",
+    "questions": [
+      {
+        "id": "Q25",
+        "text": "How much would you let software do each of these?",
+        "type": "grid",
+        "columns": [
+          "Do it automatically",
+          "Suggest, and I approve",
+          "I wouldn't use this"
+        ],
+        "rows": [
+          "Read the date, camera and other details stored in files",
+          "Suggest file names",
+          "Rename copies of files",
+          "Rename original camera files",
+          "Sort files into folders",
+          "Read slates in footage to identify scene and take",
+          "Use AI on my own computer to describe footage",
+          "Use AI in the cloud to describe footage"
+        ]
+      },
+      {
+        "id": "Q26",
+        "text": "Are you allowed to upload footage to outside online services for processing?",
+        "type": "one",
+        "options": [
+          "Yes, usually",
+          "It depends on the project or client",
+          "No, usually not",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "Q27",
+        "text": "How important is it that a tool like this works without an internet connection?",
+        "type": "one",
+        "options": [
+          "Not important",
+          "Slightly important",
+          "Moderately important",
+          "Very important",
+          "Essential"
+        ]
+      },
+      {
+        "id": "Q28",
+        "text": "Would a feature's energy use or environmental impact affect whether you use it?",
+        "type": "one",
+        "options": [
+          "Not at all",
+          "A little",
+          "Moderately",
+          "A lot",
+          "Not sure"
+        ]
+      },
+      {
+        "id": "Q29",
+        "text": "How much do you agree with each statement about automating file organisation?",
+        "type": "grid",
+        "columns": [
+          "Strongly disagree",
+          "Disagree",
+          "Neutral",
+          "Agree",
+          "Strongly agree"
+        ],
+        "rows": [
+          "It would free up time for more skilled or creative work",
+          "It would reduce paid work for people in my field",
+          "It would make it harder for newcomers to learn the craft",
+          "I would still want to check the results myself"
+        ]
+      }
+    ]
+  },
+  {
+    "title": "Closing",
+    "questions": [
+      {
+        "id": "Q30",
+        "text": "Is there anything else about managing media files that I should know?",
+        "type": "text",
+        "hint": "Optional"
+      }
+    ]
+  }
 ];
+
+SECTIONS.forEach(s => s.questions.forEach(q => {
+  const cur = t => String(t).split("{currency}").join(C);
+  ["text", "hint", "endOn"].forEach(k => { if (q[k]) q[k] = cur(q[k]); });
+  ["options", "rows", "columns"].forEach(k => { if (q[k]) q[k] = q[k].map(cur); });
+}));
 
 const form = document.getElementById("form");
 const endBox = document.getElementById("end");
@@ -241,6 +634,19 @@ function el(tag, attrs, ...kids) {
   return n;
 }
 
+// Turns [link text](https://...) into a link
+function rich(text) {
+  const out = [], re = /\[([^\]]+)\]\(([^)\s]+)\)/g;
+  let last = 0, m;
+  while ((m = re.exec(text))) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    out.push(el("a", { href: m[2], target: "_blank", rel: "noopener" }, m[1]));
+    last = re.lastIndex;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
 function contactLine() {
   const name = CONFIG.researcherName || "[your name]";
   const p = el("p", {}, `Questions? Contact ${name} at `);
@@ -252,24 +658,14 @@ function contactLine() {
 
 function introBlock() {
   return el("div", { class: "intro" },
-    el("p", {}, "Thanks for taking part. This survey takes about 10 minutes and asks how you organise video, audio and other media files after a shoot."),
-    el("p", {}, "The answers will help me research whether software could make this work easier, and where it should not interfere."),
-    el("ul", {},
-      el("li", {}, "This survey doesn't ask for your name or contact details."),
-      el("li", {}, "The survey runs on GitHub and your answers are stored with Formspree. You can read their privacy policies here: ",
-        el("a", { href: "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement", target: "_blank", rel: "noopener" }, "GitHub"),
-        " and ",
-        el("a", { href: "https://formspree.io/legal/privacy-policy/", target: "_blank", rel: "noopener" }, "Formspree"),
-        "."),
-      el("li", {}, "Taking part is voluntary. You can skip any question that isn't marked required, or stop at any time."),
-      el("li", {}, "Please don't include client names, project titles or other confidential details."),
-      el("li", {}, "Your answers will only be used for this research project.")),
+    INTRO.paragraphs.map(t => el("p", {}, rich(t))),
+    INTRO.bullets.length ? el("ul", {}, INTRO.bullets.map(t => el("li", {}, rich(t)))) : [],
     contactLine());
 }
 
 function optionRow(q, value, type) {
   const input = el("input", { type: type === "many" ? "checkbox" : "radio", name: q.id, value });
-  const row = [el("label", { class: "option" }, input, el("span", {}, value === OTHER ? "Other (please say)" : value))];
+  const row = [el("label", { class: "option" }, input, el("span", {}, value === OTHER ? TEXT.otherLabel : value))];
   if (value === OTHER) {
     const t = el("input", { type: "text", class: "other-text", name: q.id + "_other", hidden: true, "aria-label": q.id + " other, please say", maxLength: 200 });
     row.push(t);
@@ -326,8 +722,8 @@ function buildForm() {
   });
   form.append(el("input", { type: "text", name: "_gotcha", class: "trap", tabIndex: -1, autocomplete: "off", "aria-hidden": "true" }));
   form.append(el("p", { class: "error", id: "submit-error", hidden: true, role: "alert" }));
-  const back = el("button", { type: "button", class: "secondary", id: "back" }, "Back");
-  const next = el("button", { type: "submit", id: "next" }, "Next");
+  const back = el("button", { type: "button", class: "secondary", id: "back" }, TEXT.back);
+  const next = el("button", { type: "submit", id: "next" }, TEXT.next);
   form.append(el("div", { class: "nav" }, back, next));
   back.addEventListener("click", () => show(page - 1));
 }
@@ -337,7 +733,7 @@ function show(i) {
   const pages = form.querySelectorAll(".page");
   pages.forEach((p, n) => { p.hidden = n !== i; });
   document.getElementById("back").style.visibility = i === 0 ? "hidden" : "visible";
-  document.getElementById("next").textContent = i === pages.length - 1 ? "Submit" : "Next";
+  document.getElementById("next").textContent = i === pages.length - 1 ? TEXT.submit : TEXT.next;
   progress.innerHTML = "";
   progress.append(`Step ${i + 1} of ${pages.length}`,
     el("div", { class: "bar" }, el("span", { style: `width:${Math.round((i + 1) / pages.length * 100)}%` })));
@@ -351,14 +747,20 @@ function selected(q) {
   return [...form.querySelectorAll(`input[name="${q.id}"]:checked`)].map(x => x.value);
 }
 
+function answered(q) {
+  if (q.type === "grid") return q.rows.every((r, i) => form.querySelector(`input[name="${q.id}_${i}"]:checked`));
+  if (q.type === "text") return form.querySelector(`[name="${q.id}"]`).value.trim() !== "";
+  return selected(q).length > 0;
+}
+
 function validate(sec) {
   let firstBad = null;
   sec.questions.forEach(q => {
     const fs = document.getElementById("fs-" + q.id);
     const err = fs.querySelector(".error");
-    const bad = q.required && selected(q).length === 0;
+    const bad = q.required && !answered(q);
     err.hidden = !bad;
-    err.textContent = bad ? "Please answer this question to continue." : "";
+    err.textContent = bad ? TEXT.required : "";
     if (bad && !firstBad) firstBad = fs;
   });
   if (firstBad) firstBad.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -404,12 +806,12 @@ async function submit() {
   const btn = document.getElementById("next");
   err.hidden = true;
   if (!CONFIG.formEndpoint) {
-    err.textContent = "This survey isn't accepting responses yet. Your answers have not been sent.";
+    err.textContent = TEXT.notAccepting;
     err.hidden = false;
     return;
   }
   btn.disabled = true;
-  btn.textContent = "Sending…";
+  btn.textContent = TEXT.sending;
   try {
     const res = await fetch(CONFIG.formEndpoint, {
       method: "POST",
@@ -417,12 +819,12 @@ async function submit() {
       body: JSON.stringify(collect())
     });
     if (!res.ok) throw new Error("HTTP " + res.status);
-    finish("Thank you", "Your answers have been sent. They are a real help to this research.");
+    finish(TEXT.thanksTitle, TEXT.thanksMessage);
   } catch (e) {
-    err.textContent = "Your answers couldn't be sent. Please check your connection and try again.";
+    err.textContent = TEXT.sendFailed;
     err.hidden = false;
     btn.disabled = false;
-    btn.textContent = "Submit";
+    btn.textContent = TEXT.submit;
   }
 }
 
@@ -431,9 +833,7 @@ form.addEventListener("submit", e => {
   const sec = SECTIONS[page];
   const ended = sec.questions.find(q => q.endOn && selected(q)[0] === q.endOn);
   if (ended) {
-    finish("Thank you", ended.id === "Q1"
-      ? "No problem. You haven't taken part and no answers were saved. You can close this page."
-      : "This survey is for people who handle media files, so there's nothing more to answer. No answers were saved. You can close this page.");
+    finish(TEXT.endTitle, ended.endMessage || "There's nothing more to answer. No answers were saved. You can close this page.");
     return;
   }
   if (!validate(sec)) return;
@@ -454,6 +854,7 @@ form.addEventListener("submit", e => {
   buildForm();
   show(0);
 })();
+
 </script>
 </body>
 </html>
